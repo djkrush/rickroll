@@ -93,8 +93,9 @@ cd src
 python -m http.server 8000
 ```
 
-(Python is not installed on this machine — `python` there is the Microsoft Store stub. Either
-install Python, or skip local testing and check the deployed Pages URL instead.)
+(Python 3.14 is installed per-user via winget. If `python` ever prints nothing and opens the
+Microsoft Store instead, PATH has fallen back to the Store stub — reinstall with
+`winget install --id Python.Python.3.14 --scope user`.)
 
 Open http://localhost:8000/ in a private window with extensions off. Press play, confirm the
 decoy runs, confirm the switch happens at the right second. Then stop the server

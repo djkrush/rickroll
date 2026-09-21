@@ -64,8 +64,9 @@ second and writes nothing. It also guards that the rewrite preserves `id="rick"`
 The rewrite lives in one function, `Set-PrankValues`. Add new fields there, and add a matching
 assertion to the `-SelfTest` block.
 
-The wizard prefers `python -m http.server` when Python is genuinely installed and otherwise falls
-back to a small TCP static server built into the script, so the local test works either way. It
+The wizard serves with `python -m http.server`, falling back to a small TCP static server built
+into the script if Python ever goes missing. `Test-RealPython` runs the interpreter rather than
+trusting `Get-Command`, since the Store stub answers to the name without being Python. It
 refuses to commit if the diff contains anything credential-shaped — this project needs no secrets,
 so a match means something is wrong.
 
@@ -120,9 +121,12 @@ Always over http, never `file://`:
 cd src && python -m http.server 8000
 ```
 
-Then open http://localhost:8000/ in a private window with extensions off. Note that Python is
-**not** installed here (`python` resolves to the Microsoft Store stub), so local testing needs a
-Python install or another static server; otherwise test against the deployed Pages URL.
+Then open http://localhost:8000/ in a private window with extensions off.
+
+Python 3.14.7 is installed per-user at `%LOCALAPPDATA%\Programs\Python\Python314` (winget,
+`Python.Python.3.14`), ahead of the `WindowsApps` stubs on PATH. `python3.exe` there is a copy of
+`python.exe` — the python.org installer doesn't create one, so without it `python3` falls through
+to the Store stub.
 
 ## Gotchas
 
