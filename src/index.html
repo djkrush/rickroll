@@ -33,7 +33,11 @@
   .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
   .player { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000;
     border-radius: 12px; overflow: hidden; }
-  .player iframe, #yt { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .player iframe, #yt, #rick { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  /* The Rick player sits behind the decoy at opacity 0 while it burns off any
+     pre-roll ad. Opacity, not display:none — a hidden player may stop playing. */
+  #rick { opacity: 0; z-index: 0; }
+  #yt { z-index: 1; }
   #cover { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     background: #000 center / cover no-repeat; cursor: pointer; }
   #cover::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.25); }
@@ -48,6 +52,7 @@
 <body>
 <div class="wrap">
   <div class="player">
+    <div id="rick"></div>
     <div id="yt"></div>
     <div id="cover"><button aria-label="Play"></button></div>
   </div>
@@ -66,6 +71,17 @@ const CONFIG = {
   rickVideoId:       "dQw4w9WgXcQ",
   rickStartSeconds:  43,      // 0 = drum intro, 43 = straight into the chorus
   coverImage:        "thumb.jpg", // shown before they press play; same image as og:image works well
+
+  // Loading a video is what triggers a pre-roll ad, so Rick is loaded up front in a
+  // second, hidden, muted player. Any ad plays there unseen while the decoy is on
+  // screen; the switch then just swaps which player is visible, which shows no ad.
+  // Set false to go back to swapping the video inside the one player.
+  preloadRick:       true,
+  // A pre-roll reports its OWN duration; the song is 3:32. A reported duration longer
+  // than this means the ad is over and the real video is what's playing.
+  realVideoMinSeconds: 90,
+  // If an ad somehow outlasts this, switch anyway rather than never switching.
+  maxPreloadWaitSeconds: 25,
 };
 
 document.getElementById("h1").textContent = document.title;
@@ -77,7 +93,10 @@ const tag = document.createElement("script");
 tag.src = "https://www.youtube.com/iframe_api";
 document.head.appendChild(tag);
 
-let player, switched = false, timer = null;
+let player, rick, switched = false, timer = null, adTimer = null;
+let rickArmed = false;      // Rick is past any ad, parked at rickStartSeconds, ready to show
+let decoyDone = false;      // the decoy has played its switchAfterSeconds
+let waitingSince = null;    // when we started waiting on a slow ad
 
 function onYouTubeIframeAPIReady() {
   player = new YT.Player("yt", {
@@ -86,6 +105,38 @@ function onYouTubeIframeAPIReady() {
                   origin: location.origin },
     events: { onStateChange: onStateChange }
   });
+
+  if (!CONFIG.preloadRick) return;
+  rick = new YT.Player("rick", {
+    videoId: CONFIG.rickVideoId,
+    playerVars: { rel: 0, playsinline: 1, modestbranding: 1, controls: 0,
+                  origin: location.origin },
+    events: { onReady: burnAd, onStateChange: watchForRealVideo, onError: giveUpOnPreload }
+  });
+}
+
+// Muted playback is allowed without a user gesture, so the ad can start running
+// before they have even pressed play on the decoy.
+function burnAd() {
+  rick.mute();
+  rick.playVideo();
+}
+
+function watchForRealVideo(e) {
+  if (rickArmed || adTimer || e.data !== YT.PlayerState.PLAYING) return;
+  adTimer = setInterval(() => {
+    if (rick.getDuration() <= CONFIG.realVideoMinSeconds || rick.getCurrentTime() <= 0) return;
+    clearInterval(adTimer);
+    adTimer = null;
+    rick.pauseVideo();                            // parked, so no reload = no second ad
+    rick.seekTo(CONFIG.rickStartSeconds, true);
+    rickArmed = true;
+    if (decoyDone) rickroll();                    // decoy already hit its mark; go now
+  }, 250);
+}
+
+function giveUpOnPreload() {
+  rick = null;                                    // fall back to swapping in one player
 }
 
 // The user's tap is the "user gesture" browsers require before playing with sound.
@@ -93,21 +144,42 @@ cover.addEventListener("click", () => {
   if (!player) return;
   cover.style.display = "none";
   player.playVideo();
+  if (rick && !rickArmed) burnAd();               // in case muted autoplay was blocked
 });
 
 function onStateChange(e) {
   if (switched) return;
   if (e.data === YT.PlayerState.PLAYING && !timer) {
     timer = setInterval(() => {
-      if (player.getCurrentTime() - CONFIG.decoyStartSeconds >= CONFIG.switchAfterSeconds) rickroll();
+      if (player.getCurrentTime() - CONFIG.decoyStartSeconds < CONFIG.switchAfterSeconds) return;
+      if (!decoyDone) { decoyDone = true; waitingSince = Date.now(); }
+      // Let the decoy run a little long rather than cut to an ad.
+      if (!rick || rickArmed) rickroll();
+      else if (Date.now() - waitingSince >= CONFIG.maxPreloadWaitSeconds * 1000) rickroll();
     }, 250);
   }
 }
 
 function rickroll() {
+  if (switched) return;
   switched = true;
   clearInterval(timer);
-  player.loadVideoById({ videoId: CONFIG.rickVideoId, startSeconds: CONFIG.rickStartSeconds });
+  clearInterval(adTimer);
+
+  if (!rickArmed) {   // no preload available: the old way, ad and all
+    player.loadVideoById({ videoId: CONFIG.rickVideoId, startSeconds: CONFIG.rickStartSeconds });
+    return;
+  }
+
+  const decoyFrame = player.getIframe(), rickFrame = rick.getIframe();
+  rickFrame.style.opacity = "1";
+  rickFrame.style.zIndex = "1";
+  decoyFrame.style.opacity = "0";
+  decoyFrame.style.zIndex = "0";
+  player.stopVideo();
+  rick.seekTo(CONFIG.rickStartSeconds, true);
+  rick.unMute();
+  rick.playVideo();
 }
 </script>
 </body>

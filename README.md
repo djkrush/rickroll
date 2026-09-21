@@ -62,6 +62,9 @@ Search for `const CONFIG` (around line 62).
 | `rickVideoId`        | Leave as `dQw4w9WgXcQ`                                          |
 | `rickStartSeconds`   | `0` = drum intro, `43` = straight into the chorus               |
 | `coverImage`         | Leave as `thumb.jpg`                                            |
+| `preloadRick`        | Leave `true`. See "Ads" below                                   |
+| `realVideoMinSeconds`| Leave `90` unless the payoff video is shorter than ~90 s        |
+| `maxPreloadWaitSeconds`| How long the decoy may overrun while waiting out a slow ad     |
 
 ## E. Test locally over http
 
@@ -123,6 +126,30 @@ grep -n REPLACE-ME src/index.html      # should print nothing
   there; a custom domain (Settings → Pages → Custom domain) looks less suspicious.
 - Victims must press play once (browsers block autoplay with sound). The cover image makes
   that look normal.
+
+## Ads at the switch
+
+YouTube has no "disable ads" player setting, and the IFrame API deliberately exposes none. What
+it does have is a rule you can work around: a pre-roll fires when a video **starts loading**.
+
+So the page loads Rick up front, in a second player that is muted and sitting at opacity 0 behind
+the decoy. Any pre-roll plays there, unseen and unheard, usually before the victim has even
+pressed play. The page watches the reported duration — during an ad the player reports the *ad's*
+length, so anything over `realVideoMinSeconds` means the real video is running — then pauses it at
+`rickStartSeconds`. The switch just swaps which player is visible and unmutes. Nothing loads, so
+nothing triggers an ad.
+
+If the ad is still going when the decoy hits `switchAfterSeconds`, the decoy keeps playing up to
+`maxPreloadWaitSeconds` rather than cutting to an ad, so the switch can land a few seconds late.
+Set `preloadRick: false` to go back to the single-player version.
+
+This does not block ads, it just front-runs one. Two things still get through:
+
+- A **mid-roll** in the payoff video. Rare on a 3:32 song; `dQw4w9WgXcQ` doesn't have them.
+- The viewer's own client. Premium users see no ads either way.
+
+For a guaranteed-clean switch you'd have to drop YouTube for the payoff and self-host a short
+video clip, which is a copyright question rather than a technical one.
 
 ## Error 153 "Video player configuration error"
 

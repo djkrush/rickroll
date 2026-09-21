@@ -77,3 +77,13 @@ Python install or another static server; otherwise test against the deployed Pag
 - The switch is driven by polling `player.getCurrentTime()` every 250 ms and comparing against
   `decoyStartSeconds`, not by a wall-clock timer — seeking or pausing the decoy shifts when it
   fires.
+- **Two players, not one.** `#yt` holds the decoy; `#rick` sits behind it at opacity 0, muted,
+  playing from page load so any pre-roll ad burns off unseen. The switch swaps visibility and
+  unmutes — it must never call `loadVideoById`, because *loading* is what triggers a pre-roll.
+  That was the whole point of the change; keep it in mind before "simplifying" back to one player.
+  The single-player path still exists as the fallback when preloading fails or is turned off.
+- The hidden player uses **opacity, not `display:none`** — a display-hidden player can stop
+  playing in some browsers, which would defeat the ad burn.
+- "Is the ad over?" is inferred from `getDuration() > realVideoMinSeconds`, since during a
+  pre-roll the player reports the ad's duration. If the payoff video is ever changed to something
+  shorter than ~90 s, that threshold has to come down with it.
