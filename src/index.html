@@ -167,6 +167,7 @@ function rickroll() {
   clearInterval(adTimer);
 
   if (!rickArmed) {   // no preload available: the old way, ad and all
+    if (rick) rick.stopVideo();
     player.loadVideoById({ videoId: CONFIG.rickVideoId, startSeconds: CONFIG.rickStartSeconds });
     return;
   }
