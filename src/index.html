@@ -45,8 +45,11 @@
      pre-roll ad. Opacity, not display:none — a hidden player may stop playing. */
   #rick { opacity: 0; z-index: 0; }
   #yt { z-index: 1; }
-  #cover { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    background: #000; cursor: pointer; overflow: hidden; }
+  /* Must out-rank both players: #yt carries z-index 1, and a positioned element with
+     z-index auto loses to it regardless of DOM order. Without this the real YouTube
+     poster, title bar and "Watch on YouTube" button show instead of the cover. */
+  #cover { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center;
+    justify-content: center; background: #000; cursor: pointer; overflow: hidden; }
   /* Blurred fill behind the thumbnail, so an off-ratio image gets soft edges instead of
      bare black bars (what YouTube itself does with mismatched thumbnails). */
   #cover::before { content: ""; position: absolute; inset: -8%;
