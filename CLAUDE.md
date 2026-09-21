@@ -6,14 +6,14 @@ A single static prank page. Chat apps render a custom link preview from the `<me
 visitor sees a decoy YouTube video that swaps to Rick Astley after N seconds.
 
 No build system, no dependencies, no tests, no package manager. The whole app is
-`src/index.html` (114 lines: meta tags, inline CSS, inline JS) plus `src/thumb.jpg`.
+`src/index.html` (188 lines: meta tags, inline CSS, inline JS) plus `src/thumb.jpg`.
 
 ## Layout
 
 ```
 README.md                      step-by-step setup guide for the human (A-G checklist + gotchas)
 src/index.html                 the entire app
-src/thumb.jpg                  1200x630 image, used twice: chat preview (og:image) and pre-play cover
+src/thumb.jpg                  482x860 portrait image, used twice: chat preview (og:image) and pre-play cover
 src/.nojekyll                  stops Pages running the files through Jekyll
 .github/workflows/pages.yml    publishes src/ to GitHub Pages on push to main
 ```
@@ -31,11 +31,44 @@ Three blocks in `index.html`, in source order:
 2. **Page text** — `<title>` doubles as the on-page `<h1>` (set at runtime from `document.title`);
    the `.meta` div holds the fake view count.
 3. **`CONFIG`** — the only knobs for the prank itself: `decoyVideoId`, `decoyStartSeconds`,
-   `switchAfterSeconds`, `rickVideoId`, `rickStartSeconds`, `coverImage`.
+   `switchAfterSeconds`, `rickVideoId`, `rickStartSeconds`, `coverImage`, plus the ad-preload
+   settings `preloadRick`, `realVideoMinSeconds` and `maxPreloadWaitSeconds`.
 
 `og:image` and `twitter:image` hold the absolute URL
 `https://djkrush.github.io/rickroll/thumb.jpg` — link previews can't resolve relative paths, so
 both must change together if the domain ever does.
+
+## How to make a change
+
+**Never commit straight to `main`.** `main` is the deploy branch: any push to it publishes within
+a couple of minutes to a URL that may already be sitting in a group chat. There is no staging
+environment and no way to take a link back once it has been posted.
+
+Work on a branch, or in a worktree if you want the deployed copy left intact alongside:
+
+```
+git worktree add ../rickroll-work -b fix-something
+cd ../rickroll-work
+# ...edit, test...
+git worktree remove ../rickroll-work      # when done
+```
+
+A branch push does **not** deploy — `pages.yml` only triggers on `main` — so branches are safe to
+push for review. Merging to `main` is the deploy.
+
+Then test before merging:
+
+1. Serve `src/` over http and open it in a browser (see **Running it** — note the Python caveat).
+2. **Actually look at the rendered page.** Grepping the HTML is not testing. A `z-index`
+   regression once left the real YouTube poster, title bar and "Watch on YouTube" button showing
+   in place of the fake cover, and every static check passed while it was broken.
+3. Press play and watch the full switch, including what the frame looks like at the moment it
+   swaps.
+4. Check the browser console for errors — YouTube embed failures surface there.
+
+One thing local testing cannot cover: **link previews**. Chat crawlers need a public URL, so
+`og:*` changes are only verifiable after they are on `main` and deployed. Verify those by pasting
+into a chat with only yourself, with a fresh `?v=N` each time.
 
 ## Deploying
 
@@ -87,3 +120,7 @@ Python install or another static server; otherwise test against the deployed Pag
 - "Is the ad over?" is inferred from `getDuration() > realVideoMinSeconds`, since during a
   pre-roll the player reports the ad's duration. If the payoff video is ever changed to something
   shorter than ~90 s, that threshold has to come down with it.
+- **The three layers are `#rick` (0), `#yt` (1), `#cover` (3)** and all three need an explicit
+  `z-index`. `#cover` at `z-index: auto` loses to `#yt` no matter where it sits in the DOM, which
+  silently exposes the real YouTube player. Verify with
+  `document.elementFromPoint(x, y)` — it must return `DIV#cover` before play.
