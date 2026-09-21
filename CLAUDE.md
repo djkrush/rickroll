@@ -11,6 +11,7 @@ No build system, no dependencies, no tests, no package manager. The whole app is
 ## Layout
 
 ```
+wizard.ps1                     interactive setup + test + ship; the normal way to change the page
 README.md                      step-by-step setup guide for the human (A-G checklist + gotchas)
 src/index.html                 the entire app
 src/thumb.jpg                  482x860 portrait image, used twice: chat preview (og:image) and pre-play cover
@@ -37,6 +38,36 @@ Three blocks in `index.html`, in source order:
 `og:image` and `twitter:image` hold the absolute URL
 `https://djkrush.github.io/rickroll/thumb.jpg` — link previews can't resolve relative paths, so
 both must change together if the domain ever does.
+
+## The wizard
+
+`.\wizard.ps1` is the normal path for setting up a prank. It prompts for the handful of values
+that actually vary, writes them into **every** duplicated tag at once, verifies the thumbnail,
+serves the page locally, and only then — on an explicit yes — commits on a branch, merges to
+`main`, pushes and prints the live URL with a fresh `?v=` cache-buster.
+
+Editing `index.html` by hand is still fine, but the wizard exists because the duplicated meta
+tags are the easiest thing in this project to get half-right.
+
+```
+.\wizard.ps1              # the full run
+.\wizard.ps1 -SelfTest    # non-interactive; checks every rewrite anchor still matches
+.\wizard.ps1 -Port 8123   # different local port
+.\wizard.ps1 -NoServe     # skip the local test (not recommended)
+```
+
+**Run `-SelfTest` after any edit to `index.html`'s structure.** The wizard finds its targets by
+regex, so renaming a tag or a `CONFIG` key silently breaks it; the self-test catches that in a
+second and writes nothing. It also guards that the rewrite preserves `id="rick"`, `id="yt"`, the
+`#cover` z-index and `preloadRick`.
+
+The rewrite lives in one function, `Set-PrankValues`. Add new fields there, and add a matching
+assertion to the `-SelfTest` block.
+
+The wizard prefers `python -m http.server` when Python is genuinely installed and otherwise falls
+back to a small TCP static server built into the script, so the local test works either way. It
+refuses to commit if the diff contains anything credential-shaped — this project needs no secrets,
+so a match means something is wrong.
 
 ## How to make a change
 

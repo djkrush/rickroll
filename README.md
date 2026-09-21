@@ -3,6 +3,23 @@
 A single static page: chat apps see your custom thumbnail/title, the victim sees a decoy
 YouTube video that switches to Rick Astley after N seconds.
 
+## The short version
+
+Put your image at `src/thumb.jpg`, then run:
+
+```
+.\wizard.ps1
+```
+
+It asks for the headline, the teaser, the decoy video id and the timings, writes them into every
+tag that needs them, checks the thumbnail and that the decoy allows embedding, serves the page
+locally so you can watch the switch, and — only if you say yes — commits on a branch, merges,
+pushes, and hands you the live URL with a unique `?v=` so no chat app serves a stale preview.
+
+The rest of this file is the manual route, and explains what the wizard is doing.
+
+---
+
 Everything you must change lives in `src/index.html`. Line numbers below are approximate; search
 for the quoted text if they drift.
 
