@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+
+<!-- ============================================================
+     1) LINK PREVIEW (what the chat app shows). Chat apps read these
+        tags without running JavaScript, so they must be edited here.
+        og:image should be a direct https link to a JPG/PNG, ideally
+        1200x630. Upload your thumbnail next to this file as thumb.jpg
+        and use its full URL, e.g. https://yourdomain.com/thumb.jpg
+     ============================================================ -->
+<title>Caleb Downs lets Scary Terry know who's boss</title>
+<meta name="description" content="Hard hit causes pass break-up!">
+<meta property="og:type" content="video.other">
+<meta property="og:site_name" content="YouTube">
+<meta property="og:title" content="Week 2 hit everyone is talking about">
+<meta property="og:description" content="Caleb Downs lets Scary Terry know who's boss">
+<meta property="og:image" content="https://djkrush.github.io/rickroll/thumb.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Week 2 hit everyone is talking about">
+<meta name="twitter:description" content="Caleb Downs lets Scary Terry know who's boss">
+<meta name="twitter:image" content="https://djkrush.github.io/rickroll/thumb.jpg">
+
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #0f0f0f; color: #f1f1f1;
+    font-family: Roboto, Arial, system-ui, sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  .player { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000;
+    border-radius: 12px; overflow: hidden; }
+  .player iframe, #yt { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  #cover { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: #000 center / cover no-repeat; cursor: pointer; }
+  #cover::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.25); }
+  #cover button { position: relative; z-index: 1; width: 68px; height: 48px; border: 0; border-radius: 12px;
+    background: #f00; display: grid; place-items: center; cursor: pointer; }
+  #cover button::before { content: ""; border-style: solid; border-width: 10px 0 10px 18px;
+    border-color: transparent transparent transparent #fff; margin-left: 4px; }
+  h1 { font-size: 20px; margin: 14px 0 4px; }
+  .meta { color: #aaa; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="player">
+    <div id="yt"></div>
+    <div id="cover"><button aria-label="Play"></button></div>
+  </div>
+  <h1 id="h1"></h1>
+  <div class="meta">1.2M views &middot; 2 days ago</div>
+</div>
+
+<script>
+// ============================================================
+// 2) THE PRANK. Edit these values.
+// ============================================================
+const CONFIG = {
+  decoyVideoId:      "_7NS-v3nt70", // the 11-char id from youtube.com/watch?v=XXXXXXXXXXX
+  decoyStartSeconds: 0,      // skip the decoy's intro if you want
+  switchAfterSeconds: 7,    // how long the decoy plays before the switch
+  rickVideoId:       "dQw4w9WgXcQ",
+  rickStartSeconds:  43,      // 0 = drum intro, 43 = straight into the chorus
+  coverImage:        "thumb.jpg", // shown before they press play; same image as og:image works well
+};
+
+document.getElementById("h1").textContent = document.title;
+const cover = document.getElementById("cover");
+cover.style.backgroundImage = `url("${CONFIG.coverImage}")`;
+
+// Load the YouTube IFrame API
+const tag = document.createElement("script");
+tag.src = "https://www.youtube.com/iframe_api";
+document.head.appendChild(tag);
+
+let player, switched = false, timer = null;
+
+function onYouTubeIframeAPIReady() {
+  player = new YT.Player("yt", {
+    videoId: CONFIG.decoyVideoId,
+    playerVars: { start: CONFIG.decoyStartSeconds, rel: 0, playsinline: 1, modestbranding: 1,
+                  origin: location.origin },
+    events: { onStateChange: onStateChange }
+  });
+}
+
+// The user's tap is the "user gesture" browsers require before playing with sound.
+cover.addEventListener("click", () => {
+  if (!player) return;
+  cover.style.display = "none";
+  player.playVideo();
+});
+
+function onStateChange(e) {
+  if (switched) return;
+  if (e.data === YT.PlayerState.PLAYING && !timer) {
+    timer = setInterval(() => {
+      if (player.getCurrentTime() - CONFIG.decoyStartSeconds >= CONFIG.switchAfterSeconds) rickroll();
+    }, 250);
+  }
+}
+
+function rickroll() {
+  switched = true;
+  clearInterval(timer);
+  player.loadVideoById({ videoId: CONFIG.rickVideoId, startSeconds: CONFIG.rickStartSeconds });
+}
+</script>
+</body>
+</html>
