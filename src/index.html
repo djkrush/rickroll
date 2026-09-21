@@ -32,33 +32,17 @@
     font-family: Roboto, Arial, system-ui, sans-serif; }
   .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
   .player { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000;
-    border-radius: 12px; overflow: hidden; transition: aspect-ratio .25s ease; }
-  /* Before play on a phone, match the frame to the thumbnail's own shape so a portrait
-     screenshot isn't cropped to a strip. --thumb-ratio is measured from the real image
-     in JS, so swapping thumb.jpg needs no CSS change. Capped so the play button stays
-     above the fold. Once they press play the frame returns to 16:9 for the video. */
-  @media (max-width: 640px) {
-    .player.cover-up { aspect-ratio: var(--thumb-ratio, 16 / 9); max-height: 78vh; max-height: 78svh; }
-  }
+    border-radius: 12px; overflow: hidden; }
   .player iframe, #yt, #rick { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
   /* The Rick player sits behind the decoy at opacity 0 while it burns off any
      pre-roll ad. Opacity, not display:none — a hidden player may stop playing. */
   #rick { opacity: 0; z-index: 0; }
   #yt { z-index: 1; }
-  /* Must out-rank both players: #yt carries z-index 1, and a positioned element with
-     z-index auto loses to it regardless of DOM order. Without this the real YouTube
-     poster, title bar and "Watch on YouTube" button show instead of the cover. */
+  /* Must out-rank #yt's z-index 1, or the real YouTube poster and title bar show. */
   #cover { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center;
-    justify-content: center; background: #000; cursor: pointer; overflow: hidden; }
-  /* Blurred fill behind the thumbnail, so an off-ratio image gets soft edges instead of
-     bare black bars (what YouTube itself does with mismatched thumbnails). */
-  #cover::before { content: ""; position: absolute; inset: -8%;
-    background: var(--thumb) center / cover no-repeat; filter: blur(28px) brightness(.5); }
-  /* The thumbnail itself: contained, never cropped. Paints above ::before. */
-  #cover::after { content: ""; position: absolute; inset: 0;
-    background: var(--thumb) center / contain no-repeat;
-    box-shadow: inset 0 0 0 100vmax rgba(0,0,0,.22); }
-  #cover button { position: relative; z-index: 2; width: 68px; height: 48px; border: 0; border-radius: 12px;
+    justify-content: center; background: #000 center / cover no-repeat; cursor: pointer; }
+  #cover::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.25); }
+  #cover button { position: relative; z-index: 1; width: 68px; height: 48px; border: 0; border-radius: 12px;
     background: #f00; display: grid; place-items: center; cursor: pointer; }
   #cover button::before { content: ""; border-style: solid; border-width: 10px 0 10px 18px;
     border-color: transparent transparent transparent #fff; margin-left: 4px; }
@@ -68,7 +52,7 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="player cover-up">
+  <div class="player">
     <div id="rick"></div>
     <div id="yt"></div>
     <div id="cover"><button aria-label="Play"></button></div>
@@ -103,15 +87,7 @@ const CONFIG = {
 
 document.getElementById("h1").textContent = document.title;
 const cover = document.getElementById("cover");
-const frame = document.querySelector(".player");
-cover.style.setProperty("--thumb", `url("${CONFIG.coverImage}")`);
-
-// Measure the thumbnail so the phone frame can match its shape, whatever it is.
-const probe = new Image();
-probe.onload = () => {
-  frame.style.setProperty("--thumb-ratio", `${probe.naturalWidth} / ${probe.naturalHeight}`);
-};
-probe.src = CONFIG.coverImage;
+cover.style.backgroundImage = `url("${CONFIG.coverImage}")`;
 
 // Load the YouTube IFrame API
 const tag = document.createElement("script");
@@ -168,7 +144,6 @@ function giveUpOnPreload() {
 cover.addEventListener("click", () => {
   if (!player) return;
   cover.style.display = "none";
-  frame.classList.remove("cover-up");   // back to 16:9 for the video
   player.playVideo();
   if (rick && !rickArmed) burnAd();               // in case muted autoplay was blocked
 });
